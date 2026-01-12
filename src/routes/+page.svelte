@@ -2,21 +2,21 @@
   import { onMount } from 'svelte';
   import { createClient } from '@supabase/supabase-js';
 
-  // 1. Define variables (but don't initialize the client yet)
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('❌ Missing Supabase environment variables');
-}
+
   let supabase;
   let liveData = { set: "0", value: "0", twod: "--", time: "--" };
   let status = "DISCONNECTED";
 
-  // Initialize inside onMount to ensure environment is ready
   onMount(() => {
     if (supabaseUrl && supabaseAnonKey) {
       supabase = createClient(supabaseUrl, supabaseAnonKey);
+      
+      // Immediate first check
       fetchAndVault();
+      
+      // Set the 5-second pulse
       const logger = setInterval(fetchAndVault, 5000); 
       return () => clearInterval(logger);
     } else {
@@ -26,30 +26,52 @@
   });
 
   async function fetchAndVault() {
-    if (!supabase) return; // Prevent call if vault isn't ready
-    
+    if (!supabase) return;
+
+    // --- SMART TIME FILTER ---
+    // Yangon is GMT+6:30. Thai Market is GMT+7.
+    // 12:30 PM to 1:30 PM Thai time is the lunch break.
+    const now = new Date();
+    const thaiTime = new Date(now.getTime() + (30 * 60000)); // Adjusting for Thai Timezone
+    const hours = thaiTime.getHours();
+    const minutes = thaiTime.getMinutes();
+    const currentTimeVal = hours * 100; + minutes;
+
+    // Siesta: 1230 to 1330
+    if (currentTimeVal >= 1230 && currentTimeVal <= 1330) {
+      status = "SIESTA (BREAK)";
+      return; 
+    }
+
     try {
       const res = await fetch('https://api.thaistock2d.com/live');
       if (!res.ok) throw new Error('API Down');
       const data = await res.json();
-
+      
       liveData = data.live;
-      status = "LIVE";
 
-      const cleanSet = data.live.set.replace(/,/g, '');
-      const cleanValue = data.live.value.replace(/,/g, '');
+      // --- SMART DATA FILTER ---
+      // Only vault if data is real (not "--")
+      const isRealData = data.live.twod !== "--" && data.live.set !== "--";
 
-      // 3. SECURE VAULT UPLOAD
-      const { error } = await supabase
-        .from('logs')
-        .insert([{
-          set_index: cleanSet,
-          market_value: cleanValue,
-          twod: data.live.twod,
-          recorded_at: data.live.time
-        }]);
+      if (isRealData) {
+        status = "LIVE";
+        const cleanSet = data.live.set.replace(/,/g, '');
+        const cleanValue = data.live.value.replace(/,/g, '');
 
-      if (error) console.error("Vault Save Error:", error.message);
+        const { error } = await supabase
+          .from('logs')
+          .insert([{
+            set_index: cleanSet,
+            market_value: cleanValue,
+            twod: data.live.twod,
+            recorded_at: data.live.time
+          }]);
+
+        if (error) console.error("Vault Save Error:", error.message);
+      } else {
+        status = "IDLE (MARKET CLOSED)";
+      }
     } catch (err) {
       status = "ERROR";
       console.error("System Error:", err);
