@@ -85,154 +85,161 @@ import { onMount } from 'svelte';
     }
   }
 </script>
-
 <style>
   :root {
-    --bg: #0f172a; /* Darker, stealthier background */
-    --card: #1e293b;
-    --primary: #38bdf8;
-    --accent: #22c55e;
-    --danger: #ef4444;
-    --muted: #94a3b8;
-    --text: #f1f5f9;
+    /* 🎨 Bright & Modern Palette */
+    --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    --glass: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --primary: #0ea5e9; /* Sky Blue */
+    --accent: #10b981;  /* Emerald Green */
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
   }
 
   main {
-    background: radial-gradient(circle at top, #1e293b, #0f172a);
-    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg-gradient);
     min-height: 100vh;
-    padding: 2rem;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
+  /* 🏛️ Modern Header with Logo */
   header {
+    width: 100%;
+    max-width: 800px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #334155;
-    padding-bottom: 1rem;
+    margin-bottom: 2rem;
   }
 
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.025em;
-    color: var(--primary);
+  .logo-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  .status {
-    padding: 0.4rem 1rem;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 0.75rem;
-    text-transform: uppercase;
+  .mascot {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: var(--shadow);
+    transition: transform 0.3s ease;
   }
 
-  .status.LIVE { background: #064e3b; color: #4ade80; }
-  .status.ERROR { background: #7f1d1d; color: #f87171; }
-  .status.DISCONNECTED { background: #334155; color: var(--muted); }
-
-  .dashboard {
-    display: grid;
-    gap: 1.5rem;
-    align-content: center;
-    max-width: 800px;
-    margin: 0 auto;
-    width: 100%;
+  /* ⚡ Pulsing Mascot when LIVE */
+  .pulse-live {
+    animation: mascot-pulse 2s infinite ease-in-out;
+    border: 2px solid var(--accent);
   }
 
-  .card {
-    background: var(--card);
-    border: 1px solid #334155;
-    border-radius: 1rem;
+  @keyframes mascot-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { transform: scale(1); }
+  }
+
+  .glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
     padding: 2rem;
+    width: 100%;
+    max-width: 500px;
     text-align: center;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
   }
 
-  .twod {
-    font-size: 8rem;
-    font-weight: 950;
-    color: var(--text);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
+  .big-number {
+    font-size: 6rem;
+    font-weight: 900;
+    background: linear-gradient(to bottom, #0ea5e9, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -2px;
   }
 
-  .label {
+  .status-badge {
+    padding: 6px 16px;
+    border-radius: 99px;
     font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--muted);
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 1rem;
   }
 
-  .row {
+  .LIVE { background: #dcfce7; color: #166534; }
+  .ERROR { background: #fee2e2; color: #991b1b; }
+  .SIESTA { background: #fef9c3; color: #854d0e; }
+
+  .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 12px;
+    width: 100%;
+    max-width: 500px;
   }
 
-  .value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary);
-  }
-
-  footer {
+  .mini-card {
+    background: var(--glass);
+    padding: 1rem;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
     text-align: center;
-    font-size: 0.75rem;
-    color: var(--muted);
-    padding-top: 2rem;
   }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-
-  .live-glow {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  main.offline { filter: grayscale(1) opacity(0.5); }
+  .label { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+  .val { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
 </style>
 
-<main class:offline={status !== 'LIVE'}>
+<main>
   <header>
-  <h1>2D ပုဣား</h1>
-  <p class="slogan">"ကံမဟုတ်ဘူး၊ ဒါသင်္ချာ။"</p>
+    <div class="logo-group">
+      <img 
+        src="/logo.png" 
+        alt="Ponnar Logo" 
+        class="mascot" 
+        class:pulse-live={status === 'LIVE'} 
+      />
+      <div>
+        <h1 style="font-size: 1.2rem; margin:0; font-weight:800;">2D ပုဣား</h1>
+        <span style="font-size: 0.7rem; color: var(--text-muted);">Operation 6-Series v5.5</span>
+      </div>
+    </div>
+    <div class="status-badge {status}">{status}</div>
   </header>
 
-  <section class="dashboard">
-    <div class="card">
-      <div class="twod" class:live-glow={status === 'LIVE'}>
-        {liveData.twod}
-      </div>
-      <div class="label">Current 2D Market Number</div>
+  <div class="glass-card">
+    <div class="label">Current Market Number</div>
+    <div class="big-number">{liveData.twod}</div>
+    <p style="font-size: 0.8rem; font-style: italic; color: var(--text-muted);">"ကံမဟုတ်ဘူး၊ ဒါသင်္ချာ။"</p>
+  </div>
+
+  <div class="grid">
+    <div class="mini-card">
+      <div class="val">{liveData.set}</div>
+      <div class="label">SET</div>
     </div>
-
-    <div class="row">
-      <div class="card">
-        <div class="value">{liveData.set}</div>
-        <div class="label">Set Index</div>
-      </div>
-
-      <div class="card">
-        <div class="value">{liveData.value}</div>
-        <div class="label">Market</div>
-      </div>
-
-      <div class="card">
-        <div class="value">{liveData.time}</div>
-        <div class="label">Sync Time</div>
-      </div>
+    <div class="mini-card">
+      <div class="val">{liveData.value}</div>
+      <div class="label">Value</div>
     </div>
-  </section>
+    <div class="mini-card">
+      <div class="val">{liveData.time}</div>
+      <div class="label">Time</div>
+    </div>
+  </div>
 
-  <footer>
-    Cloud-Vault Active • End-to-End Encrypted Sync • Hosted on Vercel
+  <footer style="margin-top: auto; font-size: 0.7rem; color: var(--text-muted);">
+    Vercel Stealth Architecture • Cloud-Vault Active
   </footer>
 </main>
