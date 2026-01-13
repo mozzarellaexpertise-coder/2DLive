@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+import { onMount } from 'svelte';
   import { createClient } from '@supabase/supabase-js';
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -8,16 +8,16 @@
   let supabase;
   let liveData = { set: "0", value: "0", twod: "--", time: "--" };
   let status = "DISCONNECTED";
+  let lastSyncedTime = ""; // Gatekeeper
 
   onMount(() => {
     if (supabaseUrl && supabaseAnonKey) {
       supabase = createClient(supabaseUrl, supabaseAnonKey);
       
-      // Immediate first check
       fetchAndVault();
       
-      // Set the 5-second pulse
-      const logger = setInterval(fetchAndVault, 5000); 
+      // UPGRADED: 30-second interval to save DB quota
+      const logger = setInterval(fetchAndVault, 30000); 
       return () => clearInterval(logger);
     } else {
       status = "ERROR";
@@ -28,16 +28,15 @@
   async function fetchAndVault() {
     if (!supabase) return;
 
-    // --- SMART TIME FILTER ---
-    // Yangon is GMT+6:30. Thai Market is GMT+7.
-    // 12:30 PM to 1:30 PM Thai time is the lunch break.
+    // --- SMART TIME FILTER (Retained from GitHub) ---
     const now = new Date();
-    const thaiTime = new Date(now.getTime() + (30 * 60000)); // Adjusting for Thai Timezone
+    // Thai Time adjustment (approximate)
+    const thaiTime = new Date(now.getTime() + (30 * 60000)); 
     const hours = thaiTime.getHours();
     const minutes = thaiTime.getMinutes();
-    const currentTimeVal = hours * 100; + minutes;
+    const currentTimeVal = (hours * 100) + minutes;
 
-    // Siesta: 1230 to 1330
+    // Siesta: 12:30 PM to 1:30 PM (Thai Time)
     if (currentTimeVal >= 1230 && currentTimeVal <= 1330) {
       status = "SIESTA (BREAK)";
       return; 
@@ -51,10 +50,12 @@
       liveData = data.live;
 
       // --- SMART DATA FILTER ---
-      // Only vault if data is real (not "--")
       const isRealData = data.live.twod !== "--" && data.live.set !== "--";
+      
+      // --- DUPLICATE CHECK (The Fix) ---
+      const isNewData = data.live.time !== lastSyncedTime;
 
-      if (isRealData) {
+      if (isRealData && isNewData) {
         status = "LIVE";
         const cleanSet = data.live.set.replace(/,/g, '');
         const cleanValue = data.live.value.replace(/,/g, '');
@@ -68,9 +69,15 @@
             recorded_at: data.live.time
           }]);
 
-        if (error) console.error("Vault Save Error:", error.message);
-      } else {
+        if (error) {
+          console.error("Vault Save Error:", error.message);
+        } else {
+          lastSyncedTime = data.live.time; // Mark as saved
+        }
+      } else if (!isRealData) {
         status = "IDLE (MARKET CLOSED)";
+      } else {
+        console.log("Vault: Data already exists for " + data.live.time);
       }
     } catch (err) {
       status = "ERROR";
