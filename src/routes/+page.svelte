@@ -1,5 +1,5 @@
 <script>
-import { onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { createClient } from '@supabase/supabase-js';
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -8,16 +8,13 @@ import { onMount } from 'svelte';
   let supabase;
   let liveData = { set: "0", value: "0", twod: "--", time: "--" };
   let status = "DISCONNECTED";
-  let lastSyncedTime = ""; // Gatekeeper
+  let lastSyncedTime = "";
 
   onMount(() => {
     if (supabaseUrl && supabaseAnonKey) {
       supabase = createClient(supabaseUrl, supabaseAnonKey);
-      
       fetchAndVault();
-      
-      // UPGRADED: 30-second interval to save DB quota
-      const logger = setInterval(fetchAndVault, 30000); 
+      const logger = setInterval(fetchAndVault, 30000);
       return () => clearInterval(logger);
     } else {
       status = "ERROR";
@@ -28,95 +25,78 @@ import { onMount } from 'svelte';
   async function fetchAndVault() {
     if (!supabase) return;
 
-    // --- SMART TIME FILTER (Retained from GitHub) ---
     const now = new Date();
-    // Thai Time adjustment (approximate)
-    const thaiTime = new Date(now.getTime() + (30 * 60000)); 
-    const hours = thaiTime.getHours();
-    const minutes = thaiTime.getMinutes();
-    const currentTimeVal = (hours * 100) + minutes;
+    const thaiTime = new Date(now.getTime() + (30 * 60000));
+    const currentTimeVal = thaiTime.getHours() * 100 + thaiTime.getMinutes();
 
-    // Siesta: 12:30 PM to 1:30 PM (Thai Time)
     if (currentTimeVal >= 1230 && currentTimeVal <= 1330) {
-      status = "SIESTA (BREAK)";
-      return; 
+      status = "SIESTA";
+      return;
     }
 
     try {
       const res = await fetch('https://api.thaistock2d.com/live');
       if (!res.ok) throw new Error('API Down');
       const data = await res.json();
-      
+
       liveData = data.live;
 
-      // --- SMART DATA FILTER ---
-      const isRealData = data.live.twod !== "--" && data.live.set !== "--";
-      
-      // --- DUPLICATE CHECK (The Fix) ---
+      const isRealData = data.live.twod !== "--";
       const isNewData = data.live.time !== lastSyncedTime;
 
       if (isRealData && isNewData) {
         status = "LIVE";
-        const cleanSet = data.live.set.replace(/,/g, '');
-        const cleanValue = data.live.value.replace(/,/g, '');
 
-        const { error } = await supabase
-          .from('logs')
-          .insert([{
-            set_index: cleanSet,
-            market_value: cleanValue,
-            twod: data.live.twod,
-            recorded_at: data.live.time
-          }]);
+        const { error } = await supabase.from('logs').insert([{
+          set_index: data.live.set.replace(/,/g, ''),
+          market_value: data.live.value.replace(/,/g, ''),
+          twod: data.live.twod,
+          recorded_at: data.live.time
+        }]);
 
-        if (error) {
-          console.error("Vault Save Error:", error.message);
-        } else {
-          lastSyncedTime = data.live.time; // Mark as saved
-        }
+        if (!error) lastSyncedTime = data.live.time;
       } else if (!isRealData) {
-        status = "IDLE (MARKET CLOSED)";
-      } else {
-        console.log("Vault: Data already exists for " + data.live.time);
+        status = "IDLE";
       }
     } catch (err) {
       status = "ERROR";
-      console.error("System Error:", err);
+      console.error(err);
     }
   }
 </script>
+
 <style>
   :root {
-    /* 🎨 Bright & Modern Palette */
-    --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    --glass: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --primary: #0ea5e9; /* Sky Blue */
-    --accent: #10b981;  /* Emerald Green */
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --bg: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    --glass: rgba(255,255,255,.72);
+    --border: rgba(255,255,255,.5);
+    --primary: #0ea5e9;
+    --accent: #10b981;
+    --text: #0f172a;
+    --muted: #64748b;
+    --shadow: 0 10px 30px rgba(0,0,0,.08);
   }
 
   main {
-    background: var(--bg-gradient);
-    min-height: 100vh;
-    font-family: 'Inter', sans-serif;
-    color: var(--text-main);
-    padding: 1.5rem;
+    min-height: 100svh;
+    background: var(--bg);
+    padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom);
     display: flex;
     flex-direction: column;
     align-items: center;
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--text);
   }
 
-  /* 🏛️ Modern Header with Logo */
   header {
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
     display: flex;
+    gap: 1rem;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    margin: 1rem 0 1.5rem;
   }
 
   .logo-group {
@@ -126,120 +106,127 @@ import { onMount } from 'svelte';
   }
 
   .mascot {
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 44px;
     border-radius: 12px;
     background: white;
     box-shadow: var(--shadow);
-    transition: transform 0.3s ease;
   }
 
-  /* ⚡ Pulsing Mascot when LIVE */
   .pulse-live {
-    animation: mascot-pulse 2s infinite ease-in-out;
+    animation: pulse 2s infinite;
     border: 2px solid var(--accent);
   }
 
-  @keyframes mascot-pulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-    100% { transform: scale(1); }
-  }
-
-  .glass-card {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 24px;
-    box-shadow: var(--shadow);
-    padding: 2rem;
-    width: 100%;
-    max-width: 500px;
-    text-align: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .big-number {
-    font-size: 6rem;
-    font-weight: 900;
-    background: linear-gradient(to bottom, #0ea5e9, #2563eb);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -2px;
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16,185,129,.4); }
+    70% { box-shadow: 0 0 0 14px rgba(16,185,129,0); }
+    100% { box-shadow: 0 0 0 0; }
   }
 
   .status-badge {
-    padding: 6px 16px;
+    padding: 6px 14px;
     border-radius: 99px;
-    font-size: 0.75rem;
+    font-size: .7rem;
     font-weight: 800;
-    text-transform: uppercase;
   }
 
-  .LIVE { background: #dcfce7; color: #166534; }
-  .ERROR { background: #fee2e2; color: #991b1b; }
-  .SIESTA { background: #fef9c3; color: #854d0e; }
+  .LIVE { background:#dcfce7; color:#166534 }
+  .ERROR { background:#fee2e2; color:#991b1b }
+  .SIESTA, .IDLE { background:#fef9c3; color:#854d0e }
+
+  .glass {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+  }
+
+  .hero {
+    width: 100%;
+    max-width: 520px;
+    padding: clamp(1.2rem, 4vw, 2rem);
+    text-align: center;
+    margin-bottom: 1.2rem;
+  }
+
+  .big-number {
+    font-size: clamp(3.5rem, 14vw, 6rem);
+    font-weight: 900;
+    background: linear-gradient(#0ea5e9, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
 
   .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
     width: 100%;
-    max-width: 500px;
+    max-width: 520px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
+    gap: .8rem;
   }
 
-  .mini-card {
-    background: var(--glass);
-    padding: 1rem;
-    border-radius: 16px;
-    border: 1px solid var(--glass-border);
+  .mini {
+    padding: .9rem;
     text-align: center;
   }
 
-  .label { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
-  .val { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+  .label {
+    font-size: .65rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .val {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
+
+  footer {
+    margin-top: auto;
+    font-size: .7rem;
+    color: var(--muted);
+    padding: 1rem 0;
+  }
 </style>
 
 <main>
   <header>
     <div class="logo-group">
-      <img 
-        src="/logo.png" 
-        alt="Ponnar Logo" 
-        class="mascot" 
-        class:pulse-live={status === 'LIVE'} 
-      />
+      <img src="/logo.png" class="mascot" class:pulse-live={status === 'LIVE'} />
       <div>
-        <h1 style="font-size: 1.2rem; margin:0; font-weight:800;">2D ပုဣား</h1>
-        <span style="font-size: 0.7rem; color: var(--text-muted);">Operation 6-Series v5.5</span>
+        <strong>2D ပုဣား</strong><br />
+        <small style="color:var(--muted)">Operation 6-Series v5.5</small>
       </div>
     </div>
     <div class="status-badge {status}">{status}</div>
   </header>
 
-  <div class="glass-card">
+  <section class="glass hero">
     <div class="label">Current Market Number</div>
     <div class="big-number">{liveData.twod}</div>
-    <p style="font-size: 0.8rem; font-style: italic; color: var(--text-muted);">"ကံမဟုတ်ဘူး၊ ဒါသင်္ချာ။"</p>
-  </div>
+    <em style="font-size:.8rem;color:var(--muted)">ကံမဟုတ်ဘူး၊ ဒါသင်္ချာ။</em>
+  </section>
 
-  <div class="grid">
-    <div class="mini-card">
+  <section class="grid">
+    <div class="glass mini">
       <div class="val">{liveData.set}</div>
       <div class="label">SET</div>
     </div>
-    <div class="mini-card">
+    <div class="glass mini">
       <div class="val">{liveData.value}</div>
       <div class="label">Value</div>
     </div>
-    <div class="mini-card">
+    <div class="glass mini">
       <div class="val">{liveData.time}</div>
       <div class="label">Time</div>
     </div>
-  </div>
+  </section>
 
-  <footer style="margin-top: auto; font-size: 0.7rem; color: var(--text-muted);">
+  <footer>
     Vercel Stealth Architecture • Cloud-Vault Active
   </footer>
 </main>
