@@ -11,6 +11,10 @@
   let status = "DISCONNECTED"
   let lastSyncedTime = ""
 
+  /* ===== GRAPH STATE ===== */
+  let graphPoints = []
+  const MAX_POINTS = 30
+
   onMount(() => {
     if (!supabaseUrl || !supabaseAnonKey) {
       status = "ERROR"
@@ -59,23 +63,51 @@
       liveData = data.live
       status = data.live.twod !== "--" ? "LIVE" : "IDLE"
 
-// Add a check to ensure we don't log the SAME number twice in a row
-if (status === "LIVE" && data.live.time !== lastSyncedTime && data.live.twod !== "--") {
-    
-    // EMERGENCY OVERRIDE: If the market is stuck on '01', 
-    // we only log it ONCE until the time actually changes.
-    await supabase.from('logs').insert([{
-        set_index: data.live.set.replace(/,/g, ''),
-        market_value: data.live.value.replace(/,/g, ''),
-        twod: data.live.twod,
-        recorded_at: data.live.time
-    }]);
-    
-    lastSyncedTime = data.live.time; // This MUST update to stop the 5s loop!
-}
+      if (
+        status === "LIVE" &&
+        data.live.time !== lastSyncedTime &&
+        data.live.twod !== "--"
+      ) {
+        const numeric = Number(data.live.twod)
+
+        if (!isNaN(numeric)) {
+          graphPoints = [...graphPoints, numeric].slice(-MAX_POINTS)
+        }
+
+        await supabase.from('logs').insert([{
+          set_index: data.live.set.replace(/,/g, ''),
+          market_value: data.live.value.replace(/,/g, ''),
+          twod: data.live.twod,
+          recorded_at: data.live.time
+        }])
+
+        lastSyncedTime = data.live.time
+      }
+
+    } catch (err) {
+      console.error("Vault Error:", err)
+      status = "ERROR"
+    }
+  }
+
+  /* ===== SVG GRAPH BUILDER ===== */
+  function buildPath(points, width = 300, height = 120) {
+    if (points.length < 2) return ''
+
+    const min = Math.min(...points)
+    const max = Math.max(...points)
+    const range = max - min || 1
+
+    return points.map((p, i) => {
+      const x = (i / (points.length - 1)) * width
+      const y = height - ((p - min) / range) * height
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+    }).join(' ')
+  }
 </script>
 
 <main>
+
   <!-- HEADER -->
   <header class="guru-header">
     <div>
@@ -89,40 +121,53 @@ if (status === "LIVE" && data.live.time !== lastSyncedTime && data.live.twod !==
   <section class="guru-focus">
     <div class="label">Today’s Signal</div>
     <div class="guru-number">{liveData.twod}</div>
+
+    <!-- 🔥 LIVE GRAPH -->
+    <section class="guru-graph">
+      <svg viewBox="0 0 300 120" preserveAspectRatio="none">
+        <path
+          d="{buildPath(graphPoints)}"
+          fill="none"
+          stroke="#ff9933"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </section>
+
     <em class="myanmar-text">ကံမဟုတ်ဘူး၊ ဒါသင်္ချာ။</em>
   </section>
 
-  <!-- PREDICTION + PONNAR -->
-<section class="prediction-wrap">
-  <!-- PREDICTION BOARD FIRST -->
-  <div class="guru-panel half">
-    <div class="panel-title">Guru Guidance</div>
+  <!-- PREDICTION + PONNNAR -->
+  <section class="prediction-wrap">
+    <div class="guru-panel half">
+      <div class="panel-title">Guru Guidance</div>
 
-    <div class="panel-row">
-      <label>ထိပ်စီး</label>
-      <div class="panel-value">{broadcast.rows}</div>
+      <div class="panel-row">
+        <label>ထိပ်စီး</label>
+        <div class="panel-value">{broadcast.rows}</div>
+      </div>
+
+      <div class="panel-row">
+        <label>ပတ်သီး</label>
+        <div class="panel-value">{broadcast.pat_thee}</div>
+      </div>
     </div>
 
-    <div class="panel-row">
-      <label>ပတ်သီး/label>
-      <div class="panel-value">{broadcast.pat_thee}</div>
+    <div class="ponnar">
+      <img src="/pointing.png" alt="Ponnnar Sir" />
     </div>
-  </div>
+  </section>
 
-  <!-- PONNNAR ON THE RIGHT -->
-  <div class="ponnar">
-    <img src="/pointing.png" alt="Ponnnar Sir" />
-  </div>
-</section>
-
-  <!-- MARKET META -->
+  <!-- META -->
   <section class="meta-grid">
     <div>{liveData.set}<span>SET</span></div>
     <div>{liveData.value}<span>VALUE</span></div>
     <div>{liveData.time}<span>TIME</span></div>
   </section>
 
-  <footer>Guru Engine • Supabase Realtime • v6.2</footer>
+  <footer>Guru Engine • Supabase Realtime • v7.0</footer>
 </main>
 
 <style>
@@ -146,20 +191,15 @@ if (status === "LIVE" && data.live.time !== lastSyncedTime && data.live.twod !==
     align-items: center;
   }
 
-  /* HEADER */
   .guru-header {
     width: 100%;
     max-width: 420px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
   }
 
-  .subtitle {
-    font-size: 0.7rem;
-    color: var(--muted);
-  }
+  .subtitle { font-size: 0.7rem; color: var(--muted); }
 
   .status-pill {
     padding: 4px 12px;
@@ -168,12 +208,8 @@ if (status === "LIVE" && data.live.time !== lastSyncedTime && data.live.twod !==
     background: #333;
   }
 
-  .status-pill.LIVE {
-    background: var(--saffron);
-    color: #000;
-  }
+  .status-pill.LIVE { background: var(--saffron); color: #000; }
 
-  /* MAIN NUMBER */
   .guru-focus {
     width: 100%;
     max-width: 420px;
@@ -181,88 +217,38 @@ if (status === "LIVE" && data.live.time !== lastSyncedTime && data.live.twod !==
     padding: 1.5rem;
     border-radius: 24px;
     border: 1px solid var(--gold);
-    margin-bottom: 1rem;
+    margin-top: 1rem;
   }
 
   .guru-number {
     font-size: 4.5rem;
     font-weight: 900;
     color: var(--saffron);
-    letter-spacing: 2px;
   }
 
-  /* PONNNAR + PANEL */
+  .guru-graph {
+    height: 120px;
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background: rgba(0,0,0,0.35);
+    border-radius: 16px;
+    border: 1px solid rgba(255,153,51,0.35);
+  }
+
+  .guru-graph svg { width: 100%; height: 100%; }
+
   .prediction-wrap {
     width: 100%;
     max-width: 420px;
     display: flex;
-    align-items: flex-end;
     gap: 0.5rem;
     margin-top: 1rem;
-  }
-
-  .ponnar {
-    flex: 1;
-    display: flex;
-    align-items: flex-end;
   }
 
   .ponnar img {
     width: 100%;
     max-height: 180px;
     object-fit: contain;
-    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5));
-  }
-
-  .guru-panel {
-    background: var(--card);
-    border-radius: 18px;
-    border: 1px solid rgba(212,175,55,0.4);
-  }
-
-  .guru-panel.half {
-    flex: 1;
-    padding: 0.75rem;
-  }
-
-  .panel-title {
-    font-size: 0.65rem;
-    letter-spacing: 2px;
-    color: var(--gold);
-    margin-bottom: 0.5rem;
-  }
-
-  .panel-row {
-    margin-bottom: 0.5rem;
-  }
-
-  .panel-value {
-    font-size: 1.4rem;
-    font-weight: 800;
-  }
-
-  /* META GRID */
-  .meta-grid {
-    width: 100%;
-    max-width: 420px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
-    margin-top: 1rem;
-  }
-
-  .meta-grid div {
-    background: #1f2933;
-    padding: 0.75rem;
-    border-radius: 14px;
-    text-align: center;
-    font-weight: 700;
-  }
-
-  .meta-grid span {
-    display: block;
-    font-size: 0.6rem;
-    color: var(--muted);
   }
 
   footer {
