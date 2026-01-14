@@ -91,18 +91,24 @@
     <em class="myanmar-text">ကံမဟုတ်ဘူး၊ ဒါသင်္ချာ။</em>
   </section>
 
-  <!-- GURU BROADCAST -->
-  <section class="guru-panel">
-    <div class="panel-title">Guru Guidance</div>
-
-    <div class="panel-row">
-      <label>HOT ROWS</label>
-      <div class="panel-value">{broadcast.rows}</div>
+  <!-- PONNNAR + PREDICTION -->
+  <section class="prediction-wrap">
+    <div class="ponnar">
+      <img src="/pointing.png" alt="Ponnnar Sir" />
     </div>
 
-    <div class="panel-row">
-      <label>PAT-THEE</label>
-      <div class="panel-value">{broadcast.pat_thee}</div>
+    <div class="guru-panel half">
+      <div class="panel-title">Guru Guidance</div>
+
+      <div class="panel-row">
+        <label>HOT ROWS</label>
+        <div class="panel-value">{broadcast.rows}</div>
+      </div>
+
+      <div class="panel-row">
+        <label>PAT-THEE</label>
+        <div class="panel-value">{broadcast.pat_thee}</div>
+      </div>
     </div>
   </section>
 
@@ -113,7 +119,7 @@
     <div>{liveData.time}<span>TIME</span></div>
   </section>
 
-  <footer>Guru Engine • Supabase Realtime • v6.0</footer>
+  <footer>Guru Engine • Supabase Realtime • v6.2</footer>
 </main>
 
 <style>
@@ -164,7 +170,7 @@
     color: #000;
   }
 
-  /* MAIN FOCUS */
+  /* MAIN NUMBER */
   .guru-focus {
     width: 100%;
     max-width: 420px;
@@ -182,29 +188,53 @@
     letter-spacing: 2px;
   }
 
-  /* PANEL */
-  .guru-panel {
+  /* PONNNAR + PANEL */
+  .prediction-wrap {
     width: 100%;
     max-width: 420px;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .ponnar {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .ponnar img {
+    width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5));
+  }
+
+  .guru-panel {
     background: var(--card);
     border-radius: 18px;
-    padding: 1rem;
     border: 1px solid rgba(212,175,55,0.4);
   }
 
+  .guru-panel.half {
+    flex: 1;
+    padding: 0.75rem;
+  }
+
   .panel-title {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     letter-spacing: 2px;
     color: var(--gold);
     margin-bottom: 0.5rem;
   }
 
   .panel-row {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .panel-value {
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     font-weight: 800;
   }
 
