@@ -99,12 +99,12 @@ if (status === "LIVE" && data.live.time !== lastSyncedTime && data.live.twod !==
     <div class="panel-title">Guru Guidance</div>
 
     <div class="panel-row">
-      <label>HOT ROWS</label>
+      <label>ထိပ်စီး</label>
       <div class="panel-value">{broadcast.rows}</div>
     </div>
 
     <div class="panel-row">
-      <label>PAT-THEE</label>
+      <label>ပတ်သီး/label>
       <div class="panel-value">{broadcast.pat_thee}</div>
     </div>
   </div>
