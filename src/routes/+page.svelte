@@ -59,19 +59,20 @@
       liveData = data.live
       status = data.live.twod !== "--" ? "LIVE" : "IDLE"
 
-      if (status === "LIVE" && data.live.time !== lastSyncedTime) {
-        await supabase.from('logs').insert([{
-          set_index: data.live.set.replace(/,/g, ''),
-          market_value: data.live.value.replace(/,/g, ''),
-          twod: data.live.twod,
-          recorded_at: data.live.time
-        }])
-        lastSyncedTime = data.live.time
-      }
-    } catch {
-      status = "ERROR"
-    }
-  }
+// Add a check to ensure we don't log the SAME number twice in a row
+if (status === "LIVE" && data.live.time !== lastSyncedTime && data.live.twod !== "--") {
+    
+    // EMERGENCY OVERRIDE: If the market is stuck on '01', 
+    // we only log it ONCE until the time actually changes.
+    await supabase.from('logs').insert([{
+        set_index: data.live.set.replace(/,/g, ''),
+        market_value: data.live.value.replace(/,/g, ''),
+        twod: data.live.twod,
+        recorded_at: data.live.time
+    }]);
+    
+    lastSyncedTime = data.live.time; // This MUST update to stop the 5s loop!
+}
 </script>
 
 <main>
