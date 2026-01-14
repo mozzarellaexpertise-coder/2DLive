@@ -91,26 +91,28 @@
     <em class="myanmar-text">ကံမဟုတ်ဘူး၊ ဒါသင်္ချာ။</em>
   </section>
 
-  <!-- PONNNAR + PREDICTION -->
-  <section class="prediction-wrap">
-    <div class="ponnar">
-      <img src="/pointing.png" alt="Ponnnar Sir" />
+  <!-- PREDICTION + PONNAR -->
+<section class="prediction-wrap">
+  <!-- PREDICTION BOARD FIRST -->
+  <div class="guru-panel half">
+    <div class="panel-title">Guru Guidance</div>
+
+    <div class="panel-row">
+      <label>HOT ROWS</label>
+      <div class="panel-value">{broadcast.rows}</div>
     </div>
 
-    <div class="guru-panel half">
-      <div class="panel-title">Guru Guidance</div>
-
-      <div class="panel-row">
-        <label>HOT ROWS</label>
-        <div class="panel-value">{broadcast.rows}</div>
-      </div>
-
-      <div class="panel-row">
-        <label>PAT-THEE</label>
-        <div class="panel-value">{broadcast.pat_thee}</div>
-      </div>
+    <div class="panel-row">
+      <label>PAT-THEE</label>
+      <div class="panel-value">{broadcast.pat_thee}</div>
     </div>
-  </section>
+  </div>
+
+  <!-- PONNNAR ON THE RIGHT -->
+  <div class="ponnar">
+    <img src="/pointing.png" alt="Ponnnar Sir" />
+  </div>
+</section>
 
   <!-- MARKET META -->
   <section class="meta-grid">
